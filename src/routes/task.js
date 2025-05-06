@@ -49,6 +49,27 @@ taskRouter.post("/create-task", auth, async (req, res) => {
       assignedToId,
     },
   });
+
+  const creator = await prisma.user.findUnique({
+    where: { id: req.user.id },
+  });
+  
+
+  // Save notification to DB
+await prisma.notification.create({
+  data: {
+    userId: assignedToId,
+    message: `You have been assigned a new task ${title} by ${creator.name}`,
+    taskId: task.id,
+  },
+});
+
+// Send real-time notification
+const io = req.app.get("io");
+io.to(assignedToId).emit("task-assigned", {
+  message: `New task assigned: ${title}`,
+  task,
+});
   res.json(task);
 });
 
