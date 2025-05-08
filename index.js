@@ -23,10 +23,7 @@ const io = new Server(server, {
 
 
 
-app.use(cors({
-  origin: "https://tms-frontend-delta.vercel.app", 
-  credentials: true,              
-}));
+app.use(cors());
 app.use(express.json());
 
 
