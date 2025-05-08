@@ -41,7 +41,7 @@ authRouter.post("/signup", async (req, res) => {
     // Set token in HttpOnly cookie
     res.cookie("token", token, {
       httpOnly: true,
-
+      secure:true ,
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -70,7 +70,7 @@ authRouter.post("/login", async (req, res) => {
   // Set token in cookie
   res.cookie("token", token, {
     httpOnly: true,
-    secure: false,
+    secure: true,
     sameSite: "lax",
     
   });
