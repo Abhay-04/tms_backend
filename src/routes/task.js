@@ -36,8 +36,6 @@ taskRouter.post("/create-task", auth, async (req, res) => {
       .json({ error: "Invalid date format. Use DD-MM-YYYY" });
   }
 
-
-
   const task = await prisma.task.create({
     data: {
       title,
@@ -50,39 +48,59 @@ taskRouter.post("/create-task", auth, async (req, res) => {
     },
   });
 
-  const creator = await prisma.user.findUnique({
-    where: { id: req.user.id },
-  });
-  
+  if (assignedToId) {
+    const creator = await prisma.user.findUnique({
+      where: { id: req.user.id },
+    });
+    
 
-  // Save notification to DB
-await prisma.notification.create({
-  data: {
-    userId: assignedToId,
-    message: `You have been assigned a new task ${title} by ${creator.name}`,
-    taskId: task.id,
-  },
-});
+    // Save notification to DB
+    await prisma.notification.create({
+      data: {
+        userId: assignedToId,
+        message: `You have been assigned a new task ${title} by ${creator.name}`,
+        taskId: task.id,
+      },
+    });
 
-// Send real-time notification
-const io = req.app.get("io");
-io.to(assignedToId).emit("task-assigned", {
-  message: `New task assigned: ${title}`,
-  task,
-});
+    // Send real-time notification
+    const io = req.app.get("io");
+    io.to(assignedToId).emit("task-assigned", {
+      message: `New task assigned: ${title}`,
+      task,
+    });
+  }
+
   res.json(task);
 });
 
 // DELETE-TASK
-taskRouter.delete("/delete/:id", auth, checkRole("ADMIN"), async (req, res) => {
+taskRouter.delete("/delete/:id", auth, async (req, res) => {
   const taskId = req.params.id;
+
   try {
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+    });
+
+    if (!task) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+
+    // If not admin, ensure user is the creator
+    if (req.user.role !== "ADMIN" && task.createdById !== req.user.id) {
+      return res.status(403).json({ error: "Not authorized to delete this task" });
+    }
+
     await prisma.task.delete({ where: { id: taskId } });
     res.json({ message: "Task deleted" });
+
   } catch (err) {
-    res.status(404).json({ error: "Task not found" });
+    console.error("Delete Error:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 // UPDATE-TASK
 taskRouter.put("/update/:id", auth, async (req, res) => {
@@ -95,7 +113,8 @@ taskRouter.put("/update/:id", auth, async (req, res) => {
     return res.status(403).json({ error: "Not allowed" });
   }
 
-  const { title, description, dueDate, priority, status, assignedToId } = req.body;
+  const { title, description, dueDate, priority, status, assignedToId } =
+    req.body;
 
   // Parse due date only if provided
   let parsedDueDate;
@@ -123,6 +142,40 @@ taskRouter.put("/update/:id", auth, async (req, res) => {
   });
 
   res.json(updated);
+});
+
+taskRouter.get("/dashboard-tasks", auth , async (req, res) => {
+  const userId = req.user.id; 
+ 
+
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  try {
+    const [assignedTasks, createdTasks, overdueTasks] = await Promise.all([
+      prisma.task.findMany({
+        where: { assignedToId: userId },
+        orderBy: { createdAt: "asc" }
+      }),
+      prisma.task.findMany({
+        where: { createdById: userId },
+        orderBy: { createdAt: "desc" }
+      }),
+      prisma.task.findMany({
+        where: {
+          assignedToId: userId,
+          dueDate: { lt: today },
+          status: { not: "COMPLETED" }
+        },
+        orderBy: { dueDate: "asc" }
+      }),
+    ]);
+
+    res.json({ assignedTasks, createdTasks, overdueTasks });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch dashboard tasks" });
+  }
 });
 
 

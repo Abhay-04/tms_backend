@@ -5,8 +5,6 @@ const signUpDataValidation = (req) => {
 
   if (!name) {
     throw new Error("Name is not valid");
-  } else if (!role) {
-    throw new Error("Role is not valid");
   } else if (!validator.isEmail(email)) {
     throw new Error("Email is not valid");
   } else if (!validator.isStrongPassword(password)) {

@@ -5,7 +5,7 @@ const { PrismaClient } = require("@prisma/client");
 const notificationRouter = express.Router();
 const prisma = new PrismaClient();
 // Get all notifications for current user
-notificationRouter.get("/notications", auth, async (req, res) => {
+notificationRouter.get("/notifications", auth, async (req, res) => {
   const notifications = await prisma.notification.findMany({
     where: { userId: req.user.id },
     orderBy: { createdAt: "desc" },
@@ -14,13 +14,27 @@ notificationRouter.get("/notications", auth, async (req, res) => {
 });
 
 // Mark notification as read
-notificationRouter.put("/notifications/:id/read", auth , async (req, res) => {
-  const { id } = req.params;
-  const updated = await prisma.notification.update({
-    where: { id },
-    data: { read: true },
+notificationRouter.put("/notifications/:id/read", auth, async (req, res) => {
+    const { id } = req.params;
+  
+    try {
+      // Check if notification exists
+      const existing = await prisma.notification.findUnique({ where: { id } });
+  
+      if (!existing) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+  
+      const updated = await prisma.notification.update({
+        where: { id },
+        data: { read: true },
+      });
+  
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "An error occurred while updating notification" });
+    }
   });
-  res.json(updated);
-});
+  
 
 module.exports = notificationRouter;

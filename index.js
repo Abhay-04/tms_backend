@@ -10,18 +10,23 @@ const cookieParser = require("cookie-parser");
 
 const app = express();
 
+
+
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000", // frontend origin
+    origin: "http://localhost:3000",
     credentials: true,
   },
 });
 
 
 
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:3000", 
+  credentials: true,              
+}));
 app.use(express.json());
 
 
