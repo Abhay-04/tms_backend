@@ -42,7 +42,7 @@ authRouter.post("/signup", async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       secure:true ,
-      sameSite: "none",
+      sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -71,7 +71,7 @@ authRouter.post("/login", async (req, res) => {
   res.cookie("token", token, {
     httpOnly: true,
     secure: true,
-    sameSite: "none",
+    sameSite: "None",
     
   });
 
@@ -86,7 +86,7 @@ authRouter.post("/logout", async (req, res) => {
       expires: new Date(Date.now()),
       httpOnly: true,
       secure: true, // Required for HTTPS
-      sameSite: "none", // Required for cross-origin requests
+      sameSite: "None", // Required for cross-origin requests
     });
   
     res.send("Logout Successful.....");
