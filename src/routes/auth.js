@@ -31,6 +31,7 @@ authRouter.post("/signup", async (req, res) => {
       },
     });
 
+
     // Generate JWT
     const token = jwt.sign(
       { id: user.id, role: user.role, email: user.email },
@@ -91,5 +92,8 @@ authRouter.post("/logout", async (req, res) => {
   
     res.send("Logout Successful.....");
   });
+
+
+
 
 module.exports = authRouter;

@@ -109,12 +109,16 @@ taskRouter.put("/update/:id", auth, async (req, res) => {
 
   if (!existingTask) return res.status(404).json({ error: "Task not found" });
 
-  if (req.user.role !== "ADMIN" && req.user.id !== existingTask.createdById) {
-    return res.status(403).json({ error: "Not allowed" });
+  // Only ADMIN, task creator, or assignee can update the task
+  const isAdmin = req.user.role === "ADMIN";
+  const isCreator = req.user.id === existingTask.createdById;
+  const isAssignee = req.user.id === existingTask.assignedToId;
+
+  if (!isAdmin && !isCreator && !isAssignee) {
+    return res.status(403).json({ error: "Not authorized to update this task" });
   }
 
-  const { title, description, dueDate, priority, status, assignedToId } =
-    req.body;
+  const { title, description, dueDate, priority, status, assignedToId } = req.body;
 
   // Parse due date only if provided
   let parsedDueDate;
@@ -123,9 +127,7 @@ taskRouter.put("/update/:id", auth, async (req, res) => {
     const isoString = `${year}-${month}-${day}T00:00:00Z`;
     parsedDueDate = new Date(isoString);
     if (isNaN(parsedDueDate)) {
-      return res
-        .status(400)
-        .json({ error: "Invalid date format. Use DD-MM-YYYY" });
+      return res.status(400).json({ error: "Invalid date format. Use DD-MM-YYYY" });
     }
   }
 
@@ -137,12 +139,13 @@ taskRouter.put("/update/:id", auth, async (req, res) => {
       ...(dueDate && { dueDate: parsedDueDate }),
       ...(priority && { priority }),
       ...(status && { status }),
-      ...(assignedToId && { assignedToId }),
+      ...(assignedToId !== undefined && { assignedToId }), // allow null
     },
   });
 
   res.json(updated);
 });
+
 
 taskRouter.get("/dashboard-tasks", auth , async (req, res) => {
   const userId = req.user.id; 
@@ -175,6 +178,22 @@ taskRouter.get("/dashboard-tasks", auth , async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch dashboard tasks" });
+  }
+});
+
+  taskRouter.get("/users", auth ,  async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true, // or 'email' if you prefer
+      },
+    });
+
+    res.json(users);
+  } catch (err) {
+    console.error("Failed to fetch users:", err);
+    res.status(500).json({ error: "Failed to fetch users" });
   }
 });
 
